@@ -134,13 +134,13 @@
 						localStorage.setItem('involta_db_workers', JSON.stringify(state.workers));
 					},
 					add_worker: function(state, new_worker) {
-						state.workers[new_worker.id] = new_worker;
+						app.$set(state.workers, new_worker.id, new_worker);
 						
 						// обновим в localStorage
 						localStorage.setItem('involta_db_workers', JSON.stringify(state.workers));
 					},
 					set_worker: function(state, worker) {
-						state.workers[worker.id] = worker;
+						app.$set(state.workers, worker.id, worker);
 						
 						// обновим в localStorage
 						localStorage.setItem('involta_db_workers', JSON.stringify(state.workers));
