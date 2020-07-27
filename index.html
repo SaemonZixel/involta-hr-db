@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ru-RU">
+<head>
+	<meta charset="UTF-8">
+	<title>HR DataBase</title>
+	<style type="text/css">
+		html { height: 100%; font-size: 100%; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+		body { height: 100%; /* margin: 0;*/ font: 14px/20px "Droid Sans", sans-serif; color: #333333; background-color: #ffffff; }
+		
+		textarea, select, input[type="text"] { color: #101010; border: 1px solid #c4c4c4; box-sizing: border-box; -moz-box-sizing: border-box; }
+		textarea:focus, select:focus, input[type="text"]:focus { border: 1px solid #6b6b6b; }
+		
+		.worker-salary, .worker-date { width: 100px; }
+	</style>
+	<script src="/vue.js" type="text/javascript"></script>
+	<script src="/vuex.js" type="text/javascript"></script>
+	<script type="text/javascript">
+		if (!window["Promise"]) document.write('<script src="/promise-polyfill.js" type="text/javascript"><'+'/script>');
+	</script>
+</head>
+<body>
+	<h1>HR DataBase</h1>
+	<table id="app" class="workers" border="1" cellpadding="4">
+		<thead><tr>
+			<td>ФИО</td>
+			<td>Должность</td>
+			<td>Оклад</td>
+			<td>Статус</td>
+			<td>Дата приёма на работу</td>
+			<td></td>
+		</tr></thead>
+		<tbody>
+			<tr class="worker" v-for="worker in workers" v-bind:key="worker.id" v-bind:data-id="worker.id" v-bind:class="{state_editing: worker.is_edited_by == our_client_id, state_locked: worker.is_edited_by &amp;&amp; worker.is_edited_by != our_client_id}">
+			
+				<td v-if="worker.is_edited_by == our_client_id"><input class="worker-fio" name="fio" v-bind:value="worker.fio"></td>
+				<td v-else>{{worker.fio}}</td>
+				
+				<td v-if="worker.is_edited_by == our_client_id"><input class="worker-position" name="position" v-bind:value="worker.position"></td>
+				<td v-else>{{worker.position}}</td>
+				
+				<td v-if="worker.is_edited_by == our_client_id"><input class="worker-salary" name="salary" type="number" v-bind:value="worker.salary"></td>
+				<td v-else>{{worker.salary}}</td>
+				
+				<td v-if="worker.is_edited_by == our_client_id"><select class="worker-status" name="status" v-bind:value="worker.status"><option>соискатель</option><option>сотрудник</option><option>уволен</option></select></td>
+				<td v-else>{{worker.status}}</td>
+				
+				<td v-if="worker.is_edited_by == our_client_id"><input class="worker-date" name="date" type="date" v-bind:value="worker.date"></td>
+				<td v-else>{{worker.date}}</td>
+				
+				<td v-if="!worker.is_edited_by">
+					<button class="worker-edit_btn" v-on:click="edit_worker(worker.id)">Редактировать</button>
+					<button class="worker-delete_btn" v-on:click="delete_worker(worker.id)">Удалить</button>
+				</td>
+				<td v-else-if="worker.is_edited_by == our_client_id">
+					<button class="worker-save_btn" v-on:click="save_worker(worker.id)">Сохранить</button>
+					<button class="worker-save_btn" v-on:click="cancel_edition_worker(worker.id)">Отменить</button>
+				</td>
+				<td v-else>
+					<em>Редактируется&#160;кем-то...</em>
+				</td>
+			</tr>
+		</tbody>
+		<tfoot v-if="new_worker_form.show" class="new_worker-form">
+			<tr class="worker">
+			  <td><input class="worker-fio" v-model="new_worker_form.fio"></td>
+			  <td><input class="worker-position" v-model="new_worker_form.position"></td>
+			  <td><input class="worker-salary" v-model="new_worker_form.salary"></td>
+			  <td><select class="worker-status" v-model="new_worker_form.status"><option>соискатель</option><option>сотрудник</option><option>уволен</option></select></td>
+			  <td><input class="worker-date" type="date" v-model="new_worker_form.date"></td>
+			  <td><button class="worker-add_btn" v-on:click="new_worker_add">Добавить</button>&nbsp;<button class="worker-cancel_btn" v-on:click="new_worker_cancel_form">Отмена</button></td>
+			</tr>
+		</tfoot>
+	</table>
+	<button class="new_worker-btn" onclick="app.new_worker_show_form(event)">Новый сотрудник</button>
+	
+	<footer>
+	<script type="text/javascript">
+		ws = new WebSocket('ws://'+window.location.host, 'echo-protocol');
+		ws.onopen = function() {
+			console.log('Соединение установлено.');
+		};
+		ws.onclose = function(event) {
+			if (event.wasClean) {
+				console.log('Соединение закрыто чисто');
+			} else {
+				console.log('Обрыв соединения'); // например, "убит" процесс сервера
+			}
+			console.log('Код: ' + event.code + ' причина: ' + event.reason);
+		};
+		ws.onmessage = function(event) {
+			console.log("Получены данные " + event.data);
+			
+			try {
+				var resp = JSON.parse(event.data);
+				if (resp.error) alert(resp.msg);
+				else {
+					if (resp.vuex_action)
+						app.$store.commit(resp.vuex_action, resp.data);
+					
+					if (resp.vue_action)
+						app[resp.vue_action](resp.data);
+				}
+			}
+			catch(ex) {
+				alert(ex.stack||ex);
+			}
+		};
+		ws.onerror = function(error) {
+			console.log("Ошибка " + error.message);
+		};
+	
+		Vue.use(Vuex);
+	
+		var app = new Vue({
+			el: '#app',
+			data: {
+				new_worker_form: {
+					show: false
+				}
+			},
+			store: new Vuex.Store({
+				state: {workers: {}},
+				getters: {
+					workers: function(state){ 
+						return state.workers;
+					}
+				},
+				mutations: {
+					set_workers: function(state, workers) {
+						state.workers = workers;
+						
+						// обновим в localStorage
+						localStorage.setItem('involta_db_workers', JSON.stringify(state.workers));
+					},
+					add_worker: function(state, new_worker) {
+						state.workers[new_worker.id] = new_worker;
+						
+						// обновим в localStorage
+						localStorage.setItem('involta_db_workers', JSON.stringify(state.workers));
+					},
+					set_worker: function(state, worker) {
+						state.workers[worker.id] = worker;
+						
+						// обновим в localStorage
+						localStorage.setItem('involta_db_workers', JSON.stringify(state.workers));
+					},
+					remove_worker: function(state, worker) {
+						app.$delete(app.workers, worker.id);
+						
+						// обновим в localStorage
+						localStorage.setItem('involta_db_workers', JSON.stringify(state.workers));
+					},
+					synchronize_workers: function(state, changed_workers) {
+						for (var id in changed_workers)
+							if (changed_workers[id] === null)
+								app.$delete(app.workers, id);
+							else
+								app.$set(state.workers, id, changed_workers[id]);
+						
+						// обновим в localStorage
+						localStorage.setItem('involta_db_workers', JSON.stringify(state.workers));
+					}
+				},
+				actions: {
+					get_workers: function(context, workers_ts) {
+						if ((ws||{}).readyState == 1)
+							// ws.send(JSON.stringify({action:'get_workers'}));
+							ws.send(JSON.stringify({action: 'synchronize_workers', workers: workers_ts}));
+						else
+							setTimeout(function(){ app.$store.dispatch('get_workers', workers_ts); }, 200);
+					},
+					add_worker: function(context, new_worker) {
+						ws.send(JSON.stringify({action:'add_worker', worker: new_worker}));
+					},
+					edit_worker: function(context, worker) {
+						ws.send(JSON.stringify({action:'edit_worker', worker: worker}));
+					},
+					lock_worker: function(context, worker_id) {
+						ws.send(JSON.stringify({action:'lock_worker', worker_id: worker_id}));
+					},
+					unlock_worker: function(context, worker_id) {
+						ws.send(JSON.stringify({action:'unlock_worker', worker_id: worker_id}));
+					},
+					delete_worker: function(context, worker_id) {
+						ws.send(JSON.stringify({action:'remove_worker', worker_id: worker_id}));
+					}
+				}
+			}),
+			computed: {
+				our_client_id: {
+					get: function() { 
+						return document.cookie.match(/our_client_id=[0-9]+/) 
+							? document.cookie.match(/our_client_id=([0-9]+)/)[1]
+							: null;
+					},
+					set: function() { /* unused */ }
+				},
+				workers: function() {
+					return this.$store.getters.workers;
+				}
+			},
+			methods: {
+			
+				// naчать редактировать запись о сотруднике (залочить)
+				edit_worker: function(id) {
+					this.$store.dispatch('lock_worker', id);
+				},
+				
+				// сохранить изменине данных о сотруднике
+				save_worker: function(id) {
+				
+					// соберём все поля
+					var inputs = document.querySelectorAll('tr[data-id="'+id+'"] input, tr[data-id="'+id+'"] select');
+					
+					// заполним заново worker
+					var worker = {id: id};
+					for(var i in inputs) {
+						worker[inputs[i].name] = inputs[i].value;
+					}
+					
+					// отправим в store
+					this.$store.dispatch('edit_worker', worker);
+				},
+				
+				// перестать редактировать запиь сотрудника (разлочить)
+				cancel_edition_worker: function(id) {
+					this.$store.dispatch('unlock_worker', id);
+				},
+				
+				// удалить запись о сотруднике
+				delete_worker: function(id) {
+					if (confirm("УДАЛИТЬ?"))
+						this.$store.dispatch('delete_worker', id);
+				},
+				
+				// показать форму добавления нового сотрудника
+				new_worker_show_form: function(event) {
+					this.new_worker_form.fio = "Тест Тестович";
+					this.new_worker_form.position = "Программист";
+					this.new_worker_form.salary = "30000";
+					this.new_worker_form.status = "соискатель";
+					this.new_worker_form.date = "01.01.2020";
+					this.new_worker_form.show = true;
+				},
+				
+				// добавить нового сотрудника с формы
+				new_worker_add: function() {
+					this.$store.dispatch('add_worker', {
+						fio: this.new_worker_form.fio, 
+						position: this.new_worker_form.position, 
+						salary: this.new_worker_form.salary,
+						status: this.new_worker_form.status,
+						date: this.new_worker_form.date
+					});
+				},
+				
+				// скрыть форму добавления сотрудника
+				new_worker_cancel_form: function() {
+					this.new_worker_form.show = false;
+				}
+			},
+			mounted: function() {
+				try {
+					var workers = JSON.parse(localStorage.getItem('involta_db_workers') || '{}');
+					
+					// отобразим данные из localStorage для начала
+					this.$store.commit('set_workers', workers);
+					
+					// сформируем список того, что есть и насколько оно старо
+					var workers_ts = {};
+					for (var id in workers)
+						workers_ts[id] = workers[id].updateted_ts;
+				}
+				catch(ex) {
+					alert(ex.stack||ex);
+				}
+			
+				// отправим запрос на сервер на получение новых данных
+				this.$store.dispatch('get_workers', workers_ts || {});
+			}
+		});
+	</script>
+	</footer>
+</body>
+</html>
