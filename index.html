@@ -10,8 +10,17 @@
 		textarea, select, input[type="text"] { color: #101010; border: 1px solid #c4c4c4; box-sizing: border-box; -moz-box-sizing: border-box; }
 		textarea:focus, select:focus, input[type="text"]:focus { border: 1px solid #6b6b6b; }
 		
-		.worker-salary { width: 100px; }
-		.worker-date { width: 150px; }
+		.workers { border: 1px solid #ccc; }
+		.workers-head { background: #ccc; }
+		.workers-list { }
+		.worker:nth-child(even) { background: #eee; }
+		.worker-fio { width: 200px; white-space: pre; }
+		.worker-position { width: 270px; }
+		.worker-salary { width: 100px; text-align: right; }
+		.worker-status { text-align: center; }
+		.worker-date { width: 150px; text-align: center; }
+		.worker-action_btns { white-space: pre; }
+		.new_worker-btn { margin: 0.5em 0; }
 	</style>
 	<script src="/vue.js" type="text/javascript"></script>
 	<script src="/vuex.js" type="text/javascript"></script>
@@ -21,54 +30,54 @@
 </head>
 <body>
 	<h1>HR DataBase</h1>
-	<table id="app" class="workers" border="1" cellpadding="4">
-		<thead><tr>
-			<td>ФИО</td>
-			<td>Должность</td>
-			<td>Оклад</td>
-			<td>Статус</td>
-			<td>Дата приёма на работу</td>
-			<td></td>
+	<table id="app" class="workers" border="0" cellpadding="4">
+		<thead><tr class="workers-head">
+			<th>ФИО</th>
+			<th>Должность</th>
+			<th>Статус</th>
+			<th>Оклад</th>
+			<th>Дата приёма на работу</th>
+			<th></th>
 		</tr></thead>
-		<tbody>
+		<tbody class="workers-list">
 			<tr class="worker" v-for="worker in workers" v-bind:key="worker.id" v-bind:data-id="worker.id" v-bind:class="{state_editing: worker.is_edited_by == our_client_id, state_locked: worker.is_edited_by &amp;&amp; worker.is_edited_by != our_client_id}">
 			
-				<td v-if="worker.is_edited_by == our_client_id"><input class="worker-fio" name="fio" v-bind:value="worker.fio"></td>
-				<td v-else>{{worker.fio}}</td>
+				<td v-if="worker.is_edited_by == our_client_id"><input class="worker-fio" name="fio" v-bind:value="worker.fio" required="yes"></td>
+				<td v-else><div class="worker-fio">{{worker.fio}}</div></td>
 				
-				<td v-if="worker.is_edited_by == our_client_id"><input class="worker-position" name="position" v-bind:value="worker.position"></td>
-				<td v-else>{{worker.position}}</td>
-				
-				<td v-if="worker.is_edited_by == our_client_id"><input class="worker-salary" name="salary" type="number" v-bind:value="worker.salary"></td>
-				<td v-else>{{worker.salary}}</td>
+				<td v-if="worker.is_edited_by == our_client_id"><input class="worker-position" name="position" v-bind:value="worker.position" required="yes"></td>
+				<td v-else><div class="worker-position">{{worker.position}}</div></td>
 				
 				<td v-if="worker.is_edited_by == our_client_id"><select class="worker-status" name="status" v-bind:value="worker.status"><option>соискатель</option><option>сотрудник</option><option>уволен</option></select></td>
-				<td v-else>{{worker.status}}</td>
+				<td v-else><div class="worker-status">{{worker.status}}</div></td>
 				
-				<td v-if="worker.is_edited_by == our_client_id"><input class="worker-date" name="date" type="date" v-bind:value="worker.date"></td>
-				<td v-else>{{worker.date}}</td>
+				<td v-if="worker.is_edited_by == our_client_id"><input class="worker-salary" name="salary" type="number" v-bind:value="worker.salary" required="yes"></td>
+				<td v-else><div class="worker-salary">{{worker.salary}}</div></td>
 				
-				<td v-if="!worker.is_edited_by">
+				<td v-if="worker.is_edited_by == our_client_id"><input class="worker-date" name="date" type="date" v-bind:value="worker.date" required="yes"></td>
+				<td v-else><div class="worker-date">{{worker.date.replace(/([0-9]+)-([0-9]+)-([0-9]+)/, "$3.$2.$1")}}</div></td>
+				
+				<td v-if="!worker.is_edited_by" class="worker-action_btns">
 					<button class="worker-edit_btn" v-on:click="edit_worker(worker.id)">Редактировать</button>
 					<button class="worker-delete_btn" v-on:click="delete_worker(worker.id)">Удалить</button>
 				</td>
-				<td v-else-if="worker.is_edited_by == our_client_id">
+				<td v-else-if="worker.is_edited_by == our_client_id"  class="worker-action_btns">
 					<button class="worker-save_btn" v-on:click="save_worker(worker.id)">Сохранить</button>
 					<button class="worker-save_btn" v-on:click="cancel_edition_worker(worker.id)">Отменить</button>
 				</td>
-				<td v-else>
+				<td v-else class="worker-action_btns">
 					<em>Редактируется&#160;кем-то...</em>
 				</td>
 			</tr>
 		</tbody>
 		<tfoot v-if="new_worker_form.show" class="new_worker-form">
 			<tr class="worker">
-			  <td><input class="worker-fio" v-model="new_worker_form.fio"></td>
-			  <td><input class="worker-position" v-model="new_worker_form.position"></td>
-			  <td><input class="worker-salary" v-model="new_worker_form.salary"></td>
+			  <td><input class="worker-fio" v-model="new_worker_form.fio" required="yes"></td>
+			  <td><input class="worker-position" v-model="new_worker_form.position" required="yes"></td>
 			  <td><select class="worker-status" v-model="new_worker_form.status"><option>соискатель</option><option>сотрудник</option><option>уволен</option></select></td>
-			  <td><input class="worker-date" type="date" v-model="new_worker_form.date"></td>
-			  <td><button class="worker-add_btn" v-on:click="new_worker_add">Добавить</button>&nbsp;<button class="worker-cancel_btn" v-on:click="new_worker_cancel_form">Отмена</button></td>
+			  <td><input class="worker-salary" v-model="new_worker_form.salary" type="number" required="yes"></td>
+			  <td><input class="worker-date" type="date" v-model="new_worker_form.date" required="yes"></td>
+			  <td class="worker-action_btns"><button class="worker-add_btn" v-on:click="new_worker_add">Добавить</button>&nbsp;<button class="worker-cancel_btn" v-on:click="new_worker_cancel_form">Отмена</button></td>
 			</tr>
 		</tfoot>
 	</table>
@@ -202,7 +211,7 @@
 			},
 			methods: {
 			
-				// naчать редактировать запись о сотруднике (залочить)
+				// нaчать редактировать запись о сотруднике (залочить)
 				edit_worker: function(id) {
 					this.$store.dispatch('lock_worker', id);
 				},
@@ -213,10 +222,15 @@
 					// соберём все поля
 					var inputs = document.querySelectorAll('tr[data-id="'+id+'"] input, tr[data-id="'+id+'"] select');
 					
-					// заполним заново worker
+					// заполним заново worker (попутно провалидируем)
 					var worker = {id: id};
-					for(var i in inputs) {
-						worker[inputs[i].name] = inputs[i].value;
+					for(var i = 0; i < inputs.length; i++) {
+						if (inputs[i].checkValidity())
+							worker[inputs[i].name] = inputs[i].value;
+						else {
+							inputs[i].reportValidity && inputs[i].reportValidity();
+							return alert("Не все поля заполнены корректно!");;
+						}
 					}
 					
 					// отправим в store
@@ -240,12 +254,20 @@
 					this.new_worker_form.position = "Программист";
 					this.new_worker_form.salary = "30000";
 					this.new_worker_form.status = "соискатель";
-					this.new_worker_form.date = "01.01.2020";
+					this.new_worker_form.date = (new Date()).toISOString().slice(0,10);
 					this.new_worker_form.show = true;
 				},
 				
 				// добавить нового сотрудника с формы
 				new_worker_add: function() {
+					// провалидируем поля первым делом
+					var inputs = document.querySelectorAll('.new_worker-form input, .new_worker-form select');
+					for (var i = 0; i < inputs.length; i++)
+						if (inputs[i].checkValidity() == false) {
+							inputs[i].reportValidity && inputs[i].reportValidity();
+							return alert("Не все поля заполнены корректно!");
+						}
+				
 					this.$store.dispatch('add_worker', {
 						fio: this.new_worker_form.fio, 
 						position: this.new_worker_form.position, 

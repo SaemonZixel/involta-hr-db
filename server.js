@@ -8,7 +8,7 @@ var querystring = require('querystring');
 var clients = [null]; // чтоб client_id начинался с 1, а не с 0
 
 // наша база данных работников
-var workers = {"1": {id: 1, is_edited_by: null, updateted_ts: new Date()*1, fio: "Вася Иванов", position: "Тестер", salary: 40000, status: "сотрудник", date: "01.01.2020"}};
+var workers = {"1": {id: 1, is_edited_by: null, updateted_ts: new Date()*1, fio: "Вася Иванов", position: "Тестер", salary: 40000, status: "сотрудник", date: "2020-01-01"}};
 
 
 var server = http.createServer(function(request, response) {
