@@ -125,7 +125,7 @@ webSocketServer.on('request', function(request) {
 				req.worker.updateted_ts = new Date()*1;
 				workers[max_id] = req.worker;
 				
-				send_worker_to_all_clients(req.worker, 'set_worker', 'new_worker_cancel');
+				send_worker_to_all_clients(req.worker, 'set_worker', 'new_worker_cancel_form');
 			}
 			
 			else if (req.action == 'lock_worker') {
