@@ -154,8 +154,8 @@
 						// обновим в localStorage
 						localStorage.setItem('involta_db_workers', JSON.stringify(state.workers));
 					},
-					remove_worker: function(state, worker_id) {
-						app.$delete(app.workers, worker_id);
+					remove_worker: function(state, worker) {
+						app.$delete(app.workers, worker.id);
 						
 						// обновим в localStorage
 						localStorage.setItem('involta_db_workers', JSON.stringify(state.workers));

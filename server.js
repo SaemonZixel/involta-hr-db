@@ -179,7 +179,7 @@ webSocketServer.on('request', function(request) {
 				
 				delete workers[req.worker_id];
 				
-				send_worker_to_all_clients(workers[req.worker_id], 'remove_worker');
+				send_worker_to_all_clients({id: req.worker_id}, 'remove_worker');
 			}
 			
 			// синхронизация базы клиента с сервером
